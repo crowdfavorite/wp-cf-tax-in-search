@@ -10,18 +10,23 @@ Author URI: http://crowdfavorite.com
 
 /* The code uses "pcf" in place of "post_content_filtered" in several places */
 
-class CF_Tags_In_Search {
+class CF_Tax_In_Search {
 	
 	static $instance;
+	protected $taxonomies = array();
 
-	private function __construct() {
-	}
+	private function __construct() {}
 
 	public function factory() {
 		if (!isset(self::$instance)) {
-			self::$instance = new CF_Tags_In_Search;
+			$class = get_class($this);
+			self::$instance = new $class;
 		}
 		return self::$instance;
+	}
+	
+	public function add_taxonomy($taxonomy) {
+		$this->taxonomies[] = $taxonomy;
 	}
 	
 	public function add_actions() {
@@ -47,32 +52,45 @@ class CF_Tags_In_Search {
 	 */
 	public function fill_pcf($new_data, $orig_post_arr) {
 		if ($new_data['post_type'] != 'post') { return $new_data; }
-
-		/*
-		Jump through some hoops to get any tags present.  
-		['tax_input']['post_tag'] populates from the normal post editor
-		['tags_input'] populates from the QuickPress post add
-		*/
-		$tag_string = '';
-		if (isset($orig_post_arr['tax_input'])
-			&& isset($orig_post_arr['tax_input']['post_tag'])
+		
+		$new_output = '';
+		foreach ($this->taxonomies as $taxonomy) {
+			if ($taxonomy == 'category' && isset($orig_post_arr['post_category']) && is_array($orig_post_arr['post_category'])) {
+				$new_output .= $this->get_string_for_term_array($orig_post_arr['post_category'], 'category');					
+			}
+			// Not an elseif just in case category changes
+			if (
+				isset($orig_post_arr['tax_input']) 
+				&& is_array($orig_post_arr['tax_input']) 
+				&& isset($orig_post_arr['tax_input'][$taxonomy])
 			) {
-			$tag_string = $orig_post_arr['tax_input']['post_tag'];
+				$terms = $orig_post_arr['tax_input'][$taxonomy];
+				$new_output .= is_array($terms) ? $this->get_string_for_term_array($terms, $taxonomy) : $terms.',';
+			}
 		}
-		else if (isset($orig_post_arr['tags_input'])) {
-			$tag_string = is_array($orig_post_arr['tags_input'])
-				? implode(',', $orig_post_arr['tags_input'])
-				: $orig_post_arr['tags_input'];
-		}
-		$new_data['post_content_filtered'] = addslashes($tag_string);
+
+		$new_data['post_content_filtered'] = addslashes($new_output);
 		return $new_data;
+	}
+	
+	private function get_string_for_term_array($term_ids, $taxonomy) {
+		$out = '';
+		if (is_array($term_ids)) {
+			foreach ($term_ids as $term_id) {
+				$term_obj = get_term_by('id', (int)$term_id, $taxonomy);
+				if ($term_obj) {
+					$out .= $term_obj->name.',';
+				}
+			}
+		}
+		
+		return $out;
 	}
 	
 	public function add_pcf_field_to_search($search_string, $query) {
 		if (!empty($query)
 			&& is_a($query, 'WP_Query')
 			&& $query->is_search()) {
-
 			global $wpdb;
 
 			foreach( (array) $query->query_vars['search_terms'] as $term ) {
@@ -81,7 +99,7 @@ class CF_Tags_In_Search {
 				$find = "post_title LIKE '%{$term}%')";
 				$replace = $find.$term_search_string;
 				$search_string = str_replace(
-					$find,
+					$find, 
 					$replace,
 					$search_string
 				);
@@ -89,6 +107,6 @@ class CF_Tags_In_Search {
 		}
 		return $search_string;
 	}
-
 }
-CF_Tags_In_Search::factory()->add_actions();
+
+CF_Tax_In_Search::factory()->add_actions();
