@@ -19,8 +19,7 @@ class CF_Tax_In_Search {
 
 	public function factory() {
 		if (!isset(self::$instance)) {
-			$class = get_class($this);
-			self::$instance = new $class;
+			self::$instance = new CF_Tax_In_Search;
 		}
 		return self::$instance;
 	}
