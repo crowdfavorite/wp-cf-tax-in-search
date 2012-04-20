@@ -1,0 +1,5 @@
+# 1.0.1
+- Making plugin PHP 5.2 compat (using string for class name in factory method)
+
+# 1.0
+- Initial Release
