@@ -3,7 +3,7 @@
 Plugin Name: CF Tags in Search
 Plugin URI: 
 Description: Alters the content of a post (just in the DB, not on display) by adding the post's tags so search can grab those posts.
-Version: 1.0
+Version: 1.0.1
 Author: Crowd Favorite
 Author URI: http://crowdfavorite.com
 */
